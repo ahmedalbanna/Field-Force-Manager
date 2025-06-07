@@ -9,8 +9,10 @@ import { Briefcase, MapPin, Phone, Mail, User, CalendarDays, Users as UsersIcon,
 import { format } from 'date-fns';
 import type { Client, VisitPlan } from '@/types';
 import Link from 'next/link';
+import { use } from 'react';
 
-export default function ClientDetailsRepPage({ params }: { params: { clientId: string } }) {
+export default function ClientDetailsRepPage({ params: paramsPromise }: { params: Promise<{ clientId: string }> }) {
+  const params = use(paramsPromise);
   const router = useRouter();
   const client = getClientById(params.clientId);
 
