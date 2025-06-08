@@ -1,21 +1,31 @@
+
+'use client';
+
+import { use } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { getVisitById, getClientById } from '@/lib/mock-data';
 import { notFound } from 'next/navigation';
 import { CalendarDays, Briefcase } from 'lucide-react';
-import { VisitDetailsClient } from './components/VisitDetailsClient';
+import { VisitDetails } from '@/components/visits/VisitDetails'; // Updated import path
 import type { Client, VisitPlan } from '@/types';
 
-export default function VisitDetailsPage({ params }: { params: { visitId: string } }) {
-  const visit = getVisitById(params.visitId) as VisitPlan | undefined; // Cast for mock data
+export default function VisitDetailsPage({ params: paramsPromise }: { params: Promise<{ visitId: string }> }) {
+  const params = use(paramsPromise);
+  const visit = getVisitById(params.visitId) as VisitPlan | undefined; 
   
   if (!visit) {
     notFound();
   }
 
-  const client = getClientById(visit.clientRef) as Client | undefined; // Cast for mock data
+  // Basic authorization for rep (mock)
+  const currentRepId = 'rep1'; // Replace with actual auth logic
+  if (visit.salesRepRef !== currentRepId) {
+    // notFound(); // Or redirect to an unauthorized page
+  }
+
+  const client = getClientById(visit.clientRef) as Client | undefined; 
 
   if (!client) {
-    // This case should ideally not happen if data is consistent
     console.warn(`Client with ID ${visit.clientRef} not found for visit ${visit.visitId}`);
   }
   
@@ -26,7 +36,9 @@ export default function VisitDetailsPage({ params }: { params: { visitId: string
         description={`Details for your visit scheduled on ${new Date(visit.scheduledDate).toLocaleDateString()}`}
         icon={Briefcase}
       />
-      <VisitDetailsClient visit={visit} client={client} />
+      <VisitDetails visit={visit} client={client} role="sales_rep" />
     </div>
   );
 }
+
+    
