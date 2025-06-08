@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -9,16 +10,14 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { mockUsers } from '@/lib/mock-data'; // Assuming current user can be fetched or is in context
 import type { User } from '@/types';
-import { UserCircle, Edit3, Save, ShieldCheck, LogOut, Mail, Phone, Briefcase } from 'lucide-react';
+import { UserCircle, Edit3, Save, ShieldCheck, LogOut, Mail, Phone, Briefcase, LayoutDashboard } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
+import Link from 'next/link';
 
 export default function ProfilePage() {
   const router = useRouter();
   const { toast } = useToast();
-  // Simulate fetching current user. In a real app, this would come from auth context/session.
-  // For now, let's assume the first user (manager) if path is /manager, else a rep.
-  // This logic is simplistic and needs proper auth context in a real app.
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   
@@ -26,25 +25,36 @@ export default function ProfilePage() {
   const [displayName, setDisplayName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [photoUrl, setPhotoUrl] = useState('');
+  const [dashboardPath, setDashboardPath] = useState<string | null>(null);
 
 
   useEffect(() => {
     // Crude role detection based on URL. Replace with actual auth logic.
     const path = window.location.pathname;
     let userToSet: User | undefined;
+    let determinedDashboardPath: string | null = null;
+
     if (path.includes('/manager')) {
       userToSet = mockUsers.find(u => u.role === 'manager');
+      determinedDashboardPath = '/manager/dashboard';
     } else if (path.includes('/rep')) {
       userToSet = mockUsers.find(u => u.role === 'sales_rep');
+      determinedDashboardPath = '/rep/dashboard';
     }
     // Fallback if no specific role path, or for a generic /profile
-    if (!userToSet) userToSet = mockUsers[0]; 
+    if (!userToSet) {
+      userToSet = mockUsers[0]; // Default to first user
+      // Attempt to guess dashboard path if not already set (e.g. manager as default)
+      if (userToSet?.role === 'manager') determinedDashboardPath = '/manager/dashboard';
+      else if (userToSet?.role === 'sales_rep') determinedDashboardPath = '/rep/dashboard';
+    }
     
     if (userToSet) {
       setCurrentUser(userToSet);
       setDisplayName(userToSet.displayName);
       setPhoneNumber(userToSet.phoneNumber || '');
       setPhotoUrl(userToSet.photoUrl || 'https://placehold.co/128x128/E0E0E0/B0B0B0&text=?');
+      setDashboardPath(determinedDashboardPath);
     }
   }, []);
 
@@ -56,6 +66,18 @@ export default function ProfilePage() {
     // Simulate API call to update profile
     console.log("Saving profile:", { displayName, phoneNumber, photoUrl });
     setCurrentUser(prev => prev ? {...prev, displayName, phoneNumber, photoUrl} : null);
+    
+    // Update mockUsers array for persistence across navigation (simulation)
+    const userIndex = mockUsers.findIndex(u => u.uid === currentUser.uid);
+    if (userIndex !== -1) {
+        mockUsers[userIndex] = {
+            ...mockUsers[userIndex],
+            displayName,
+            phoneNumber,
+            photoUrl,
+        };
+    }
+
     setIsEditing(false);
     toast({ title: "Profile Updated", description: "Your profile information has been saved." });
   };
@@ -75,7 +97,21 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="My Profile" description="View and manage your account details." icon={UserCircle} />
+      <PageHeader 
+        title="My Profile" 
+        description="View and manage your account details." 
+        icon={UserCircle}
+        actions={
+          dashboardPath && (
+            <Link href={dashboardPath} passHref>
+              <Button variant="outline">
+                <LayoutDashboard className="mr-2 h-4 w-4" />
+                Go to Dashboard
+              </Button>
+            </Link>
+          )
+        }
+      />
 
       <Card className="max-w-2xl mx-auto shadow-xl">
         <CardHeader className="text-center">
@@ -83,7 +119,7 @@ export default function ProfilePage() {
             <AvatarImage src={photoUrl} alt={currentUser.displayName} data-ai-hint="profile picture" />
             <AvatarFallback className="text-4xl bg-muted-foreground text-background">{getInitials(currentUser.displayName)}</AvatarFallback>
           </Avatar>
-          <CardTitle className="text-3xl font-headline">{currentUser.displayName}</CardTitle>
+          <CardTitle className="text-3xl font-headline">{isEditing ? displayName : currentUser.displayName}</CardTitle>
           <CardDescription className="capitalize text-primary">{currentUser.role.replace('_', ' ')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6 p-6">
@@ -105,7 +141,7 @@ export default function ProfilePage() {
           ) : (
             <div className="space-y-3 text-sm">
               <div className="flex items-center"><Mail className="w-4 h-4 mr-3 text-muted-foreground" />Email: {currentUser.email}</div>
-              {currentUser.phoneNumber && <div className="flex items-center"><Phone className="w-4 h-4 mr-3 text-muted-foreground" />Phone: {currentUser.phoneNumber}</div>}
+              {currentUser.phoneNumber && <div className="flex items-center"><Phone className="w-4 h-4 mr-3 text-muted-foreground" />Phone: {currentUser.phoneNumber || 'Not set'}</div>}
               <div className="flex items-center"><Briefcase className="w-4 h-4 mr-3 text-muted-foreground" />Role: <span className="capitalize ml-1">{currentUser.role.replace('_', ' ')}</span></div>
             </div>
           )}
@@ -121,7 +157,7 @@ export default function ProfilePage() {
                 <Edit3 className="mr-2 h-4 w-4" /> Edit Profile
               </Button>
             )}
-            <Button variant="outline" className="w-full sm:w-auto">
+            <Button variant="outline" className="w-full sm:w-auto" disabled>
               <ShieldCheck className="mr-2 h-4 w-4" /> Change Password
             </Button>
           </div>
