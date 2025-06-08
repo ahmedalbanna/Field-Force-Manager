@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -11,6 +12,8 @@ import type { Client, SalesRep } from '@/types';
 import { PlusCircle, Search, Briefcase, Users } from 'lucide-react';
 import { ClientForm } from './components/ClientForm';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle as AlertDialogTitleComponent } from "@/components/ui/alert-dialog"; // Renamed AlertDialogTitle to avoid conflict
+import { useToast } from "@/hooks/use-toast";
 
 export default function ManageClientsPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -18,6 +21,8 @@ export default function ManageClientsPage() {
   const [clients, setClients] = useState<Client[]>(mockClients);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [clientToDelete, setClientToDelete] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const filteredClients = clients.filter(client => {
     const matchesSearch = client.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -36,20 +41,40 @@ export default function ManageClientsPage() {
     setIsFormOpen(true);
   };
 
-  const handleSaveClient = (clientData: Omit<Client, 'clientId' | 'createdAt'> | Client) => {
-    if ('clientId' in clientData) { // Editing existing client
-      setClients(prevClients => prevClients.map(c => c.clientId === clientData.clientId ? clientData : c));
-    } else { // Adding new client
-      const newClient: Client = {
+  const handleSaveClient = (clientData: Omit<Client, 'clientId' | 'createdAt' | 'assignedRepName'> & { assignedRepRef: string } | Client) => {
+    const repName = mockSalesReps.find(sr => sr.userRef === clientData.assignedRepRef)?.user?.displayName;
+    if ('clientId' in clientData && clientData.clientId) { 
+      const updatedClient = {
         ...clientData,
+        assignedRepName: repName,
+      } as Client;
+      setClients(prevClients => prevClients.map(c => c.clientId === updatedClient.clientId ? updatedClient : c));
+      toast({ title: "Client Updated", description: `${updatedClient.clientName} has been updated.` });
+    } else { 
+      const newClient: Client = {
+        ...(clientData as Omit<Client, 'clientId' | 'createdAt' | 'assignedRepName'> & { assignedRepRef: string }), // type assertion
         clientId: `client${Date.now()}`,
         createdAt: new Date().toISOString(),
-        assignedRepName: mockSalesReps.find(sr => sr.userRef === clientData.assignedRepRef)?.user?.displayName,
+        assignedRepName: repName,
       };
       setClients(prevClients => [newClient, ...prevClients]);
+      toast({ title: "Client Added", description: `${newClient.clientName} has been added.` });
     }
     setIsFormOpen(false);
     setEditingClient(null);
+  };
+  
+  const handleDeleteClient = (clientId: string) => {
+    setClientToDelete(clientId);
+  };
+
+  const confirmDeleteClient = () => {
+    if (clientToDelete) {
+      const clientName = clients.find(c => c.clientId === clientToDelete)?.clientName;
+      setClients(prevClients => prevClients.filter(c => c.clientId !== clientToDelete));
+      toast({ title: "Client Deleted", description: `${clientName || 'Client'} has been deleted.` });
+      setClientToDelete(null);
+    }
   };
 
   const clientTypes = [
@@ -61,9 +86,9 @@ export default function ManageClientsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader 
-        title="Manage Clients" 
-        description="View, add, or edit client information." 
+      <PageHeader
+        title="Manage Clients"
+        description="View, add, or edit client information."
         icon={Users}
         actions={
           <Button onClick={handleAddClient} className="bg-primary hover:bg-primary/90 text-primary-foreground">
@@ -98,7 +123,13 @@ export default function ManageClientsPage() {
       {filteredClients.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredClients.map(client => (
-            <ClientCard key={client.clientId} client={client} role="manager" onEdit={handleEditClient} />
+            <ClientCard 
+              key={client.clientId} 
+              client={client} 
+              role="manager" 
+              onEdit={handleEditClient}
+              onDelete={handleDeleteClient} 
+            />
           ))}
         </div>
       ) : (
@@ -119,14 +150,32 @@ export default function ManageClientsPage() {
               {editingClient ? 'Update the details for this client.' : 'Fill in the information for the new client.'}
             </DialogDescription>
           </DialogHeader>
-          <ClientForm 
-            client={editingClient} 
+          <ClientForm
+            client={editingClient}
             salesReps={mockSalesReps}
-            onSave={handleSaveClient} 
-            onCancel={() => setIsFormOpen(false)} 
+            onSave={handleSaveClient}
+            onCancel={() => setIsFormOpen(false)}
           />
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!clientToDelete} onOpenChange={() => setClientToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitleComponent>Are you sure?</AlertDialogTitleComponent> {/* Used Renamed Component */}
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the client
+              "{clients.find(c => c.clientId === clientToDelete)?.clientName}".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setClientToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteClient} className="bg-destructive hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

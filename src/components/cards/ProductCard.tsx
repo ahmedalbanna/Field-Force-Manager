@@ -1,17 +1,19 @@
+
 import type { Product } from '@/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import Link from 'next/link'; // Assuming link to product details page
-import { Package, DollarSign, Factory, Eye, Edit } from 'lucide-react';
+import Link from 'next/link';
+import { Package, DollarSign, Factory, Eye, Edit, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 
 interface ProductCardProps {
   product: Product;
   role: 'manager' | 'sales_rep';
   onEdit?: (product: Product) => void;
+  onDelete?: (productId: string) => void;
 }
 
-export function ProductCard({ product, role, onEdit }: ProductCardProps) {
+export function ProductCard({ product, role, onEdit, onDelete }: ProductCardProps) {
   return (
     <Card className="shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden flex flex-col">
       <CardHeader className="p-4">
@@ -30,9 +32,6 @@ export function ProductCard({ product, role, onEdit }: ProductCardProps) {
         </div>
       </CardHeader>
       <CardContent className="p-4 space-y-2 text-sm flex-grow">
-         {/* Placeholder for product image if available in future */}
-         {/* <Image src="https://placehold.co/300x200" alt={product.productName} width={300} height={200} className="w-full h-32 object-cover rounded-md mb-2" /> */}
-
         {product.description && <p className="text-foreground/80 text-xs mb-1 h-10 overflow-hidden">{product.description}</p>}
         <div className="flex items-center">
           <DollarSign className="w-4 h-4 mr-2 shrink-0 text-muted-foreground" />
@@ -45,13 +44,17 @@ export function ProductCard({ product, role, onEdit }: ProductCardProps) {
           </div>
         )}
       </CardContent>
-      <CardFooter className="p-3 bg-muted/20 border-t">
-        {/* Link to product details page - to be created */}
-        <Link href={role === 'manager' ? `/manager/products/${product.productId}` : `/rep/products/${product.productId}`} passHref className="w-full">
+      <CardFooter className="p-3 bg-muted/20 border-t flex gap-2">
+        <Link href={role === 'manager' ? `/manager/products/${product.productId}` : `/rep/products/${product.productId}`} passHref className="flex-1">
           <Button variant="outline" className="w-full text-sm">
             <Eye className="w-4 h-4 mr-2" /> View Details
           </Button>
         </Link>
+        {role === 'manager' && onDelete && (
+          <Button variant="destructive" size="sm" onClick={() => onDelete(product.productId)} className="flex-1 text-sm">
+            <Trash2 className="w-4 h-4 mr-2" /> Delete
+          </Button>
+        )}
       </CardFooter>
     </Card>
   );

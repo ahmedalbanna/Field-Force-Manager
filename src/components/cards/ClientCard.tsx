@@ -1,16 +1,18 @@
+
 import type { Client } from '@/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Briefcase, MapPin, Phone, Mail, User, Edit, Eye } from 'lucide-react';
+import { Briefcase, MapPin, Phone, Mail, User, Edit, Eye, Trash2 } from 'lucide-react';
 
 interface ClientCardProps {
   client: Client;
   role: 'manager' | 'sales_rep';
   onEdit?: (client: Client) => void;
+  onDelete?: (clientId: string) => void;
 }
 
-export function ClientCard({ client, role, onEdit }: ClientCardProps) {
+export function ClientCard({ client, role, onEdit, onDelete }: ClientCardProps) {
   const clientTypeMap = {
     hospital_government: 'Government Hospital',
     hospital_private: 'Private Hospital',
@@ -59,13 +61,18 @@ export function ClientCard({ client, role, onEdit }: ClientCardProps) {
           </div>
         )}
       </CardContent>
-      <CardFooter className="p-4 bg-muted/20">
-        <Link href={role === 'manager' ? `/manager/clients/${client.clientId}` : `/rep/clients/${client.clientId}`} passHref className="w-full">
+      <CardFooter className="p-4 bg-muted/20 flex gap-2">
+        <Link href={role === 'manager' ? `/manager/clients/${client.clientId}` : `/rep/clients/${client.clientId}`} passHref className="flex-1">
           <Button variant="outline" className="w-full">
             <Eye className="w-4 h-4 mr-2" />
             View Details
           </Button>
         </Link>
+        {role === 'manager' && onDelete && (
+           <Button variant="destructive" size="sm" onClick={() => onDelete(client.clientId)} className="flex-1 text-sm">
+            <Trash2 className="w-4 h-4 mr-2" /> Delete
+          </Button>
+        )}
       </CardFooter>
     </Card>
   );
