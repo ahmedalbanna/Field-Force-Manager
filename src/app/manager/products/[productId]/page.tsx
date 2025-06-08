@@ -3,7 +3,7 @@
 
 import { use } from 'react';
 import { PageHeader } from '@/components/PageHeader';
-import { getProductById, getClientById as getClientNameByIdHelper, mockClients } from '@/lib/mock-data'; // Renamed to avoid conflict
+import { getProductById, mockClients } from '@/lib/mock-data'; // Renamed to avoid conflict & ensure mockProducts is available via getProductById
 import { notFound, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -104,8 +104,3 @@ export default function ProductDetailsPage({ params: paramsPromise }: { params: 
     </div>
   );
 }
-
-// Helper function to get product by ID from mock data
-const getProductById = (productId: string) => {
-  return mockProducts.find(p => p.productId === productId);
-};
